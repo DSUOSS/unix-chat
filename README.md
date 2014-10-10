@@ -2,3 +2,8 @@ ssh-chat
 ========
 
 A simple chat client/server suite for use over ssh
+
+
+THIS PROJECT IS CURRENTLY UNDER DEVELOPMENT.
+CODE MAY NOT BE COMPLETE OR FUNCTIONAL.
+USE AT YOUR OWN RISK.  DO NOT REPORT BUGS
