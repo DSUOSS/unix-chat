@@ -18,7 +18,6 @@ WINDOW *input;
 int parent_x, parent_y;
 
 uint cSocket;
-char username[24];
 
 uint create_socket(){
 	int s, len;
@@ -52,7 +51,7 @@ void window_refresh_handler() {
 	wresize(input, 1, parent_x);
 
 	wclear(input);
-	mvwprintw(input, 0, 0, "%s: ", username);
+	mvwprintw(input, 0, 0, "%s: ", getlogin());
 
 	wrefresh(chat);
 	wrefresh(input);
@@ -62,7 +61,7 @@ void window_refresh_handler() {
 void recieve_manager(){
 	char *buffer;
 	char *lines[100];
-	int i, lineCount, len;
+	int i, lineCount = 0, len;
 
 	for (;;){
 		buffer = malloc(100);
@@ -82,12 +81,12 @@ void recieve_manager(){
 }
 
 void send_manager(){
-	char line[100];
-	int usernameLen = strlen(username);
+	char in[100];
+	char out[124];
 	for(;;){
-		wgetnstr(input, line, 100);
-		write(cSocket, username, usernameLen);
-		write(cSocket, line, strlen(line));
+		wgetnstr(input, in, 100);
+		snprintf(out, 124, "[%s]: %s", getlogin(), in);
+		write(cSocket, out, strlen(out));
 	}
 }
 
@@ -96,14 +95,6 @@ int main(int argc, char *argv[]) {
 	pthread_t recieveT, sendT;
 	int len;
 	cSocket = create_socket();
-
-	puts("Please enter your username:");
-	fgets(username+1, 20, stdin);
-	username[0] = '<';
-	len = strlen(username);
-	username[len-1] = '>';
-	username[len] = ' ';
-	username[len+1] = '\0';
 
 	signal(SIGWINCH, window_refresh_handler);
 
