@@ -23,7 +23,7 @@ void add_client(sock_container* c, uint s){
 void remove_client(sock_container* c, uint s){
 	uint i, loc = 0;
 	for (i = 0; i < c->count; ++i){
-		if (s = c->sockets[i]){
+		if (s == c->sockets[i]){
 			loc = i;
 			break;
 		}
