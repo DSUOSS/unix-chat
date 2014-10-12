@@ -10,16 +10,24 @@
 #include <pthread.h>
 
 #define SOCKET_PATH "/tmp/chat_socket"
+#define WELCOME_MSG "Welcome to UnixChat"
+#define MSG_SIZE 1024
 
 typedef unsigned int uint;
+
+typedef struct _msg {
+	char *txt;
+	struct _msg *next;
+} *msg;
 
 WINDOW *chat;
 WINDOW *input;
 int parent_x, parent_y;
-
+msg lines;
 uint cSocket;
 
 uint create_socket(){
+
 	int s, len;
 	struct sockaddr_un remote;
 
@@ -39,18 +47,57 @@ uint create_socket(){
 	}
 
 	return s;
+
+}
+
+int count_messages() {
+
+	int count;
+	msg ptr;
+
+	count = 0;
+	ptr = lines;
+	do {
+		count++;
+		ptr = ptr->next;
+	} while(ptr != NULL);
+
+	return count;
+
 }
 
 void window_refresh_handler() {
+
+	int i, start_point, c;
+	msg tmp_ptr;
 
 	getmaxyx(stdscr, parent_y, parent_x);
 
 	mvwin(chat, 0, 0);
 	wresize(chat, parent_y - 1, parent_x);
+
 	mvwin(input, parent_y - 1, 0);
 	wresize(input, 1, parent_x);
 
+	wclear(chat);
 	wclear(input);
+
+	start_point = count_messages() - parent_y + 2;
+
+	tmp_ptr = lines;
+	for(i=0; i<start_point; i++) {
+		tmp_ptr = tmp_ptr->next;
+	}
+
+	i = 0;
+	do {
+		for(c=0; c<parent_x; c++) {
+			mvwprintw(chat, i, c, " ");
+		}
+		mvwprintw(chat, i++, 0, "%s", tmp_ptr->txt);
+		tmp_ptr = tmp_ptr->next;
+	} while(tmp_ptr != NULL);
+
 	mvwprintw(input, 0, 0, "%s: ", getlogin());
 
 	wrefresh(chat);
@@ -59,42 +106,77 @@ void window_refresh_handler() {
 }
 
 void recieve_manager(){
+
 	char *buffer;
-	char *lines[100];
-	int i, lineCount = 0, len;
+	msg new_msg, tmp_ptr;
+	int len;
 
 	for (;;){
-		buffer = malloc(100);
-		len = read(cSocket, buffer, 100);
+
+		window_refresh_handler();
+
+		buffer = calloc(MSG_SIZE, sizeof(char));
+		if(!buffer) {
+			perror("Failed to allocate memory");
+			exit(-1);
+		}
+		len = read(cSocket, buffer, MSG_SIZE);
 		if (!len)
 			break;
-		buffer[len] = '\0';
 
-		lines[lineCount] = buffer;
-		lineCount++;
-
-		for(i=0;i<lineCount;i++) {
-			mvwprintw(chat, i, 0, "%s", lines[i]);
+		new_msg = malloc(sizeof(struct _msg));
+		if(!new_msg) {
+			perror("Failed to allocate memory");
+			exit(-1);
 		}
-		window_refresh_handler();
+		new_msg->txt = buffer;
+		new_msg->next = NULL;
+
+		tmp_ptr = lines;
+		while(tmp_ptr->next != NULL)
+			tmp_ptr = tmp_ptr->next;
+		tmp_ptr->next = new_msg;
+
 	}
+
 }
 
 void send_manager(){
-	char in[100];
-	char out[124];
+
+	char *in;
+	char *out;
+
 	for(;;){
-		wgetnstr(input, in, 100);
-		snprintf(out, 124, "[%s]: %s", getlogin(), in);
+
+		in = calloc(MSG_SIZE, sizeof(char));
+		out = calloc(MSG_SIZE, sizeof(char));
+		if(!in || !out) {
+			perror("Failed to allocate memory");
+			exit(-1);
+		}
+
+		wgetnstr(input, in, MSG_SIZE);
+		snprintf(out, MSG_SIZE, "[%s]: %s", getlogin(), in);
 		write(cSocket, out, strlen(out));
+
 	}
+
 }
 
 
 int main(int argc, char *argv[]) {
+
 	pthread_t recieveT, sendT;
 	int len;
 	cSocket = create_socket();
+
+	lines = malloc(sizeof(struct _msg));
+	if(!lines) {
+		perror("Failed to allocate memory");
+		exit(-1);
+	}
+	lines->txt = strdup(WELCOME_MSG);
+	lines->next = NULL;
 
 	signal(SIGWINCH, window_refresh_handler);
 
@@ -103,6 +185,8 @@ int main(int argc, char *argv[]) {
 
 	chat = newwin(parent_y - 1, parent_x, 0, 0);
 	input = newwin(1, parent_x, parent_y - 1, 0);
+
+	scrollok(chat, 1);
 
 	window_refresh_handler();
 

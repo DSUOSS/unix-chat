@@ -102,6 +102,7 @@ int main(int argc, char** argv){
 		for(i = 0; i<clients.count; ++i){
 			uint socket = clients.sockets[i];
 			if(FD_ISSET(socket, &fds)){
+				bzero(buffer, sizeof(buffer));
 				len = read(socket, &buffer, 1024);
 				if (len>0){
 					//write data to all clients
