@@ -91,9 +91,6 @@ void window_refresh_handler() {
 
 	i = 0;
 	do {
-		for(c=0; c<parent_x; c++) {
-			mvwprintw(chat, i, c, " ");
-		}
 		mvwprintw(chat, i++, 0, "%s", tmp_ptr->txt);
 		tmp_ptr = tmp_ptr->next;
 	} while(tmp_ptr != NULL);
