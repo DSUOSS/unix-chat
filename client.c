@@ -156,6 +156,8 @@ void send_manager(){
 		snprintf(out, MSG_SIZE, "[%s]: %s", getlogin(), in);
 		write(cSocket, out, strlen(out));
 
+		free(in);
+		free(out);
 	}
 
 }
