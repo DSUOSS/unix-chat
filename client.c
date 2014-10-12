@@ -140,26 +140,14 @@ void recieve_manager(){
 
 void send_manager(){
 
-	char *in;
-	char *out;
+	char in[MSG_SIZE];
+	char out[MSG_SIZE];
 
 	for(;;){
-
-		in = calloc(MSG_SIZE, sizeof(char));
-		out = calloc(MSG_SIZE, sizeof(char));
-		if(!in || !out) {
-			perror("Failed to allocate memory");
-			exit(-1);
-		}
-
 		wgetnstr(input, in, MSG_SIZE);
 		snprintf(out, MSG_SIZE, "[%s]: %s", getlogin(), in);
 		write(cSocket, out, strlen(out));
-
-		free(in);
-		free(out);
 	}
-
 }
 
 
