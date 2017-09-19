@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 #define SOCKET_PATH "/tmp/chat_socket"
-#define WELCOME_MSG "Welcome to UnixChat"
+#define WELCOME_MSG "Welcome to UnixChat (^C to exit)"
 #define MSG_SIZE 1024
 
 typedef unsigned int uint;
@@ -22,6 +22,7 @@ typedef struct _msg {
 
 WINDOW *chat;
 WINDOW *input;
+WINDOW *name;
 int parent_x, parent_y;
 msg lines;
 uint cSocket;
@@ -76,11 +77,15 @@ void window_refresh_handler() {
 	mvwin(chat, 0, 0);
 	wresize(chat, parent_y - 1, parent_x);
 
-	mvwin(input, parent_y - 1, 0);
-	wresize(input, 1, parent_x);
+	mvwin(input, parent_y - 1, strlen(getlogin()) + 2);
+	wresize(input, 1, parent_x - strlen(getlogin()) - 2);
+
+	mvwin(name, parent_y - 1, 0);
+	wresize(name, 1, strlen(getlogin()) + 2);
 
 	wclear(chat);
 	wclear(input);
+	wclear(name);
 
 	start_point = count_messages() - parent_y + 2;
 
@@ -95,10 +100,11 @@ void window_refresh_handler() {
 		tmp_ptr = tmp_ptr->next;
 	} while(tmp_ptr != NULL);
 
-	mvwprintw(input, 0, 0, "%s: ", getlogin());
+	mvwprintw(name, 0, 0, "%s: ", getlogin());
 
 	wrefresh(chat);
 	wrefresh(input);
+	wrefresh(name);
 
 }
 
@@ -171,7 +177,8 @@ int main(int argc, char *argv[]) {
 	getmaxyx(stdscr, parent_y, parent_x);
 
 	chat = newwin(parent_y - 1, parent_x, 0, 0);
-	input = newwin(1, parent_x, parent_y - 1, 0);
+	input = newwin(1, parent_x - strlen(getlogin()) - 2, parent_y - 1, strlen(getlogin()) + 2);
+	name = newwin(1, strlen(getlogin()) + 2, parent_y - 1, 0);
 
 	scrollok(chat, 1);
 

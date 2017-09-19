@@ -1,0 +1,13 @@
+[Unit]
+Description=Unix Chat
+After=network.target
+
+[Service]
+Type=simple
+User=unixchat
+WorkingDirectory=/
+ExecStart=/usr/local/bin/unixchat-server
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
