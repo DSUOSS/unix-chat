@@ -3,10 +3,13 @@
 #include <sys/un.h>
 #include <sys/select.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define CHAT_SOCKET "/tmp/chat_socket"
 
 typedef unsigned int uint;
 
@@ -60,7 +63,7 @@ uint init_socket(){
 	}
 
 	local.sun_family = AF_UNIX;
-	strcpy(local.sun_path, "/tmp/chat_socket");
+	strcpy(local.sun_path, CHAT_SOCKET);
 	unlink(local.sun_path);
 	len = strlen(local.sun_path) + sizeof(local.sun_family);
 
@@ -74,6 +77,9 @@ uint init_socket(){
 	}
 
 	fcntl(s, F_SETFL, O_NONBLOCK);
+
+	chmod(CHAT_SOCKET, S_IRWXU|S_IRWXG|S_IRWXO);
+
 	return s;
 }
 

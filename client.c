@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <signal.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,7 +11,7 @@
 #include <pthread.h>
 
 #define SOCKET_PATH "/tmp/chat_socket"
-#define WELCOME_MSG "Welcome to UnixChat (^C to exit)"
+#define WELCOME_MSG "Welcome to UnixChat"
 #define MSG_SIZE 1024
 
 typedef unsigned int uint;
@@ -69,7 +70,8 @@ int count_messages() {
 
 void window_refresh_handler() {
 
-	int i, start_point, c;
+	int i, start_point, c, str_len;
+	char *str;
 	msg tmp_ptr;
 
 	getmaxyx(stdscr, parent_y, parent_x);
@@ -94,11 +96,15 @@ void window_refresh_handler() {
 		tmp_ptr = tmp_ptr->next;
 	}
 
-	i = 0;
-	do {
-		mvwprintw(chat, i++, 0, "%s", tmp_ptr->txt);
+	wattron(chat, A_BOLD);
+	mvwprintw(chat, 0, 0, "%s", tmp_ptr->txt);
+	tmp_ptr = tmp_ptr->next;
+	wattroff(chat, A_BOLD);
+
+	for(i=1; tmp_ptr != NULL; i++) {
+		mvwprintw(chat, i, 0, "%s", tmp_ptr->txt);
 		tmp_ptr = tmp_ptr->next;
-	} while(tmp_ptr != NULL);
+	}
 
 	mvwprintw(name, 0, 0, "%s: ", getlogin());
 
@@ -156,7 +162,6 @@ void send_manager(){
 	}
 }
 
-
 int main(int argc, char *argv[]) {
 
 	pthread_t recieveT, sendT;
@@ -179,6 +184,8 @@ int main(int argc, char *argv[]) {
 	chat = newwin(parent_y - 1, parent_x, 0, 0);
 	input = newwin(1, parent_x - strlen(getlogin()) - 2, parent_y - 1, strlen(getlogin()) + 2);
 	name = newwin(1, strlen(getlogin()) + 2, parent_y - 1, 0);
+
+	wattron(name, A_BOLD);
 
 	scrollok(chat, 1);
 
