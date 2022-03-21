@@ -28,13 +28,14 @@ int parent_x, parent_y;
 msg lines;
 uint cSocket;
 
+// create socket and connect to file as specified in SOCKET_PATH
 uint create_socket(){
 
-	int s, len;
+	int soc, len;
 	struct sockaddr_un remote;
 
-	s = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (s == -1){
+	soc = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (soc == -1){
 		perror("Failed to create socket");
 		exit(-1);
 	}
@@ -43,17 +44,16 @@ uint create_socket(){
 	strcpy(remote.sun_path, SOCKET_PATH);
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 
-	if (connect(s, (struct sockaddr *)&remote, len) == -1){
+	if (connect(soc, (struct sockaddr *)&remote, len) == -1){
 		perror("Connect failed");
 		exit(-2);
 	}
 
-	return s;
-
+	return soc;
 }
 
+// return length of linked list containing messages
 int count_messages() {
-
 	int count;
 	msg ptr;
 
@@ -65,7 +65,6 @@ int count_messages() {
 	} while(ptr != NULL);
 
 	return count;
-
 }
 
 void window_refresh_handler() {
@@ -116,53 +115,75 @@ void window_refresh_handler() {
 
 void recieve_manager(){
 
-	char *buffer;
+	// currentStr is for keeping track of what part of the buffer has yet to be processed, temp is for holding the strings that will go into the message
+	char *buffer, *currentStr, *temp; 
 	msg new_msg, tmp_ptr;
-	int len;
+	int len, buffer_sz;
 
-	for (;;){
+	while(1){
 
 		window_refresh_handler();
+		buffer = NULL;	
+		buffer_sz = 0;
 
-		buffer = calloc(MSG_SIZE, sizeof(char));
-		if(!buffer) {
-			perror("Failed to allocate memory");
-			exit(-1);
-		}
-		len = read(cSocket, buffer, MSG_SIZE);
-		if (!len)
-			break;
+		// read in characters 1024 at a time until socket has no more waiting bytes storing them in buffer
+		// buffer_sz tracks the current size of the buffer, which will grow to accommodate each read
+		do
+		{
+			buffer_sz += MSG_SIZE;
+			buffer = realloc(buffer, buffer_sz*sizeof(char));
+		    if(!buffer) {
+				perror("Failed to allocate memory");
+				exit(-1);
+			}	
+			memset(buffer+(buffer_sz-MSG_SIZE), 0, MSG_SIZE); // set new area to be all 0 bytes (important for later determining where strings are)
 
-		new_msg = malloc(sizeof(struct _msg));
-		if(!new_msg) {
-			perror("Failed to allocate memory");
-			exit(-1);
-		}
-		new_msg->txt = buffer;
-		new_msg->next = NULL;
+			len = read(cSocket, buffer+(buffer_sz - MSG_SIZE), MSG_SIZE); // read should start in the newly created space, which will start at the current size of the buffer minus MSG_SIZE
+		}while(len == MSG_SIZE);	
 
-		tmp_ptr = lines;
-		while(tmp_ptr->next != NULL)
-			tmp_ptr = tmp_ptr->next;
-		tmp_ptr->next = new_msg;
+		currentStr = buffer;	// starting with the first substring of the buffer
+		do
+		{
+			// allocating space for the message string
+			len = strlen(currentStr);
+			temp = calloc(len+1, sizeof(char));
 
+			strcpy(temp, currentStr);
+
+			new_msg = malloc(sizeof(struct _msg));
+			if(!new_msg) {
+				perror("Failed to allocate memory");
+				exit(-1);
+			}
+			new_msg->txt = temp;
+			new_msg->next = NULL;
+
+			// attaching the new message to the end of the linked list
+			tmp_ptr = lines;
+			while(tmp_ptr->next != NULL)
+				tmp_ptr = tmp_ptr->next;
+			tmp_ptr->next = new_msg;
+
+			// move to the next substring
+			currentStr += (len+1);
+		}while(currentStr[0] != 0 && currentStr <= (buffer+buffer_sz));	// loop should end when we either run out of valid substrings, or when we go beyond the end of the buffer
+
+		free(buffer);
 	}
-
 }
 
 void send_manager(){
-
 	char in[MSG_SIZE];
 	char out[MSG_SIZE];
 
-	for(;;){
+	while(1){
 		wgetnstr(input, in, MSG_SIZE);
 		snprintf(out, MSG_SIZE, "[%s]: %s", getlogin(), in);
 		write(cSocket, out, strlen(out));
 	}
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
 
 	pthread_t recieveT, sendT;
 	int len;
